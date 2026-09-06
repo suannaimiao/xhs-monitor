@@ -1,5 +1,7 @@
 import random
+import re
 import time
+import urllib.parse
 from datetime import datetime
 
 from loguru import logger
@@ -9,6 +11,65 @@ from xhs_utils.xhs_pc import XHSPcAuth
 
 from .config import NOTE_URL_TPL
 from .db import connect, insert_metrics, known_note_ids, now, upsert_note
+
+# 联名识别：'品牌A x 品牌B' / 'A×B' / 'A✖B' 等，以及 '联名/合作款' 关键词
+COBRAND_SEP = r"[xX×✖✕]"
+COBRAND_RE = re.compile(
+    r"([A-Za-z0-9\u4e00-\u9fa5][A-Za-z0-9\u4e00-\u9fa5&·+.\-]{0,24})"
+    r"\s*" + COBRAND_SEP + r"\s*"
+    r"([A-Za-z0-9\u4e00-\u9fa5][A-Za-z0-9\u4e00-\u9fa5&·+.\-]{0,24})"
+)
+COBRAND_KEYWORDS = ("联名", "合作款", "联乘", "特别合作")
+# 常见误匹配词：分隔符两侧出现这些视为普通文本而非品牌名
+COBRAND_STOP = {"vs", "and", "or", "the", "of", "in", "on", "at", "to", "x", "iphone", "ios", "pc", "tv", "ui", "ux", "xp", "xl", "xs", "dna", "diy"}
+# 品牌名前后常见的修饰语（修剪用）
+_COBRAND_SUFFIX = ["联名礼盒", "联名系列", "合作系列", "联名款", "合作款", "联名", "限定", "礼盒", "周边",
+                   "开箱", "测评", "上新", "开售", "发布", "推荐", "种草", "分享", "来啦", "来了", "好可爱"]
+_COBRAND_PREFIX = ["终于买到", "终于", "今天买了", "今天入手", "开箱", "入手", "买了", "抢到", "喜提",
+                   "首发", "新品", "测评", "推荐", "种草", "第一个", "以及", "还有", "同时"]
+
+
+def _trim_brand(w: str) -> str:
+    changed = True
+    while changed:
+        changed = False
+        for suf in _COBRAND_SUFFIX:
+            if len(w) > len(suf) + 1 and w.endswith(suf):
+                w, changed = w[:-len(suf)], True
+        for pre in _COBRAND_PREFIX:
+            if len(w) > len(pre) + 1 and w.startswith(pre):
+                w, changed = w[len(pre):], True
+    return w.strip("。，,.！!？?~～ 的了在是这就也都被把让给用要又再才刚和与跟有个这那")
+
+
+def _brandlike(word: str) -> bool:
+    w = word.strip().strip("。，,.！!？?~～ ")
+    if len(w) < 1 or len(w) > 25 or w.lower() in COBRAND_STOP:
+        return False
+    if re.fullmatch(r"[a-z]+", w):
+        return False
+    if re.fullmatch(r"[\d.]+", w):
+        return False
+    return True
+
+
+def detect_cobrand(title: str, desc: str, tags: str = "") -> str:
+    text = f"{title or ''} {desc or ''} {tags or ''}"
+    found = []
+    for m in COBRAND_RE.finditer(text):
+        a, b = _trim_brand(m.group(1)), _trim_brand(m.group(2))
+        if _brandlike(a) and _brandlike(b):
+            pair = f"{a} × {b}"
+            if pair not in found:
+                found.append(pair)
+    # 联名关键词兜底：无 x 配对但明确写了联名
+    if not found and any(k in text for k in COBRAND_KEYWORDS):
+        for k in COBRAND_KEYWORDS:
+            i = text.find(k)
+            if i >= 0:
+                found.append(f"{text[max(0, i-12):i+len(k)+12].strip()}（关键词：{k}）")
+                break
+    return "; ".join(found[:3])
 
 
 def build_api(cfg):
@@ -72,7 +133,7 @@ def _summary_from_card(card: dict, user_id: str) -> dict:
 def _detail_from_note_info(item: dict) -> dict:
     nc = item.get("note_card") or {}
     interact = nc.get("interact_info") or {}
-
+    tags = ",".join(t["name"] for t in (nc.get("tag_list") or []) if isinstance(t, dict) and t.get("name"))
     return {
         "title": (nc.get("title") or "").strip() or "无标题",
         "desc": nc.get("desc", ""),
@@ -82,30 +143,57 @@ def _detail_from_note_info(item: dict) -> dict:
         "comment_count": _int_cn(interact.get("comment_count")),
         "share_count": _int_cn(interact.get("share_count")),
         "ip_location": nc.get("ip_location", "未知"),
-        "tags": ",".join(t["name"] for t in (nc.get("tag_list") or []) if isinstance(t, dict) and t.get("name")),
+        "tags": tags,
         "publish_time": nc.get("time"),
+        "cobrand": detect_cobrand(nc.get("title", ""), nc.get("desc", ""), tags),
     }
+
+
+def iter_user_notes(api, homepage: str, cutoff_ms: int, page_sleep=(2, 5), max_consecutive_old=5):
+    """按发布时间从新到旧翻页产出笔记卡片，越过 cutoff（或连续多张旧笔记）即停止。"""
+    parsed = urllib.parse.urlparse(homepage)
+    user_id = parsed.path.split("/")[-1]
+    qs = urllib.parse.parse_qs(parsed.query)
+    xsec_token = qs.get("xsec_token", [""])[0]
+    xsec_source = qs.get("xsec_source", ["pc_search"])[0]
+    cursor = ""
+    consecutive_old = 0
+    while True:
+        success, msg, res = api.get_user_note_info(user_id, cursor, xsec_token, xsec_source)
+        if not success:
+            raise RuntimeError(f"获取用户笔记失败: {msg}")
+        data = (res or {}).get("data") or {}
+        cards = data.get("notes") or []
+        for card in cards:
+            t = card.get("time") or 0
+            if cutoff_ms and t < cutoff_ms:
+                consecutive_old += 1
+                if consecutive_old >= max_consecutive_old:
+                    return
+                continue
+            consecutive_old = 0
+            yield card
+        if not cards or not data.get("has_more") or "cursor" not in data:
+            return
+        cursor = str(data.get("cursor"))
+        time.sleep(random.uniform(*page_sleep))
 
 
 def collect_user(api, conn, user: dict, cfg: dict, run_at: str, errors: list) -> dict:
     uid, name = user["user_id"], user.get("name", user["user_id"])
-    homepage = user.get("homepage", f"https://www.xiaohongshu.com/user/profile/{uid}")
+    cutoff_ms = cfg["settings"]["min_publish_ms"]
     stats = {"name": name, "user_id": uid, "total_seen": 0, "new_notes": 0, "detail_fetched": 0}
     try:
-        success, msg, cards = api.get_user_all_notes(homepage)
-        if not success:
-            raise RuntimeError(f"获取用户笔记失败: {msg}")
-        stats["total_seen"] = len(cards)
         known = known_note_ids(conn, uid)
         seen_ids = set()
         max_details = cfg["settings"]["max_details_per_user"]
-
-        for card in cards:
+        for card in iter_user_notes(api, user.get("homepage"), cutoff_ms):
             s = _summary_from_card(card, uid)
             nid = s["note_id"]
             if not nid or nid in seen_ids:
                 continue
             seen_ids.add(nid)
+            stats["total_seen"] += 1
             is_new = nid not in known
             if is_new and stats["detail_fetched"] < max_details:
                 time.sleep(random.uniform(*cfg["settings"]["detail_sleep"]))
@@ -118,6 +206,8 @@ def collect_user(api, conn, user: dict, cfg: dict, run_at: str, errors: list) ->
                 else:
                     logger.warning(f"详情拉取失败 {nid}: {dmsg}")
                     errors.append(f"[{name}] 详情失败 {nid}: {dmsg}")
+            if not s.get("cobrand"):
+                s["cobrand"] = detect_cobrand(s["title"], s.get("desc", ""), s.get("tags", ""))
             upsert_note(conn, s, detail_fetched=is_new and "desc" in s)
             insert_metrics(conn, nid, s["liked_count"], s["collected_count"],
                            s["comment_count"], s["share_count"])

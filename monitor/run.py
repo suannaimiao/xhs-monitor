@@ -6,6 +6,7 @@ from loguru import logger
 
 from .collect import build_api, collect_all, health_check
 from .config import ensure_dirs, load_config, LOGS_DIR
+from .dashboard import build_dashboard
 from .db import connect, init_db, new_notes_this_run
 from .mailer import send_alert, send_report
 from .report import build_excel, build_html, build_hot_notes
@@ -45,7 +46,8 @@ def main():
         result["hot_notes"] = build_hot_notes(conn)
         excel_path = build_excel(result, conn)
         html_path = build_html(result, conn)
-        logger.info(f"报告已生成: {excel_path}, {html_path}")
+        dashboard_path = build_dashboard(cfg)
+        logger.info(f"报告已生成: {excel_path}, {html_path}, 看板: {dashboard_path}")
 
         if not args.no_mail and (cfg["settings"]["always_mail"] or result["new_notes"]):
             with open(html_path, encoding="utf-8") as f:

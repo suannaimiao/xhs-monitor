@@ -48,10 +48,32 @@ users:
 ## 运行
 
 ```bash
-uv run python -m monitor.run            # 采集 + 报告 + 邮件
-uv run python -m monitor.run --no-mail  # 只采集出报告，不发邮件（调试用）
-uv run python -m monitor.run --collect-only  # 只采集入库
+uv run python -m monitor.run              # 采集 + 报告 + 看板 + 邮件
+uv run python -m monitor.run --no-mail    # 只采集出报告，不发邮件（调试用）
+uv run python -m monitor.run --collect-only    # 只采集入库
+uv run python -m monitor.backfill [轮数]  # 历史详情回填（多轮循环补详情）
 ```
+
+## 数据看板
+
+每次运行后生成 `data/dashboard.html`（单文件，双击浏览器打开即可）：
+
+- **统计卡**：监测账号数 / 笔记总数 / 今日新增 / 联名内容数 / 总点赞
+- **筛选器**：账号、图文/视频、今日新增/近7天/近30天、只看联名、关键词搜索、多种排序
+- **联名内容专区**：独立模块展示识别出的联名笔记（品牌A × 品牌B）
+- **笔记瀑布流**：封面 + 标题 + 互动数据，今日新增带 NEW 标记，点击卡片弹出详情（正文全文、话题、数据、原文链接）
+- 深浅色主题切换（记住偏好）、键盘操作（Tab 聚焦 + Enter 打开 + Esc 关闭）
+
+## 联名识别
+
+对标题 + 正文 + 话题做启发式识别：
+
+1. **配对规则**（主要）：`品牌A x 品牌B`，分隔符支持 `x / X / × / ✖ / ✕`，自动修剪"联名/礼盒/开箱"等修饰词，过滤 `vs / iphone` 等常见误匹配
+2. **关键词兜底**：无配对但包含 `联名 / 合作款 / 联乘` 时，摘录上下文并标注"（关键词）"
+
+识别结果存于 `notes.cobrand` 字段。启发式规则无法覆盖所有形式（如口播视频、图片内联名信息），可在看板中人工复核。
+
+采集范围：`watchlist.yaml` 中 `min_publish_date: '2026-01-01'`，仅采集该日期之后发布的笔记，翻页从最新往旧自动截止。
 
 ## 定时（cron）
 
@@ -86,11 +108,14 @@ xhs-monitor/
 ├── monitor/
 │   ├── config.py        # 配置加载（.env + watchlist.yaml）
 │   ├── db.py            # SQLite（notes / note_metrics / run_history）
-│   ├── collect.py       # 增量采集主流程
-│   ├── report.py        # Excel + HTML 报告生成
+│   ├── collect.py       # 增量采集主流程 + 联名识别
+│   ├── report.py        # Excel + HTML 日报生成
+│   ├── dashboard.py     # 数据看板（单文件 HTML）
+│   ├── backfill.py      # 历史详情回填
 │   ├── mailer.py        # 邮件发送（报告/告警）
+│   ├── login.py         # 登录并自动保存 Cookie
 │   ├── run.py           # 一键入口
-│   └── templates/       # Jinja2 模板
+│   └── templates/       # Jinja2 模板（日报/告警/看板）
 ├── apis/ xhs_utils/     # vendor 自 Spider_XHS
 ├── data/ logs/          # 输出（gitignore）
 ├── watchlist.yaml       # 竞品清单

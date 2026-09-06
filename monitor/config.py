@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -19,6 +20,10 @@ def load_config():
     users = wl.get("users") or []
     for u in users:
         u.setdefault("homepage", f"https://www.xiaohongshu.com/user/profile/{u['user_id']}")
+    min_date = settings.get("min_publish_date")
+    min_publish_ms = 0
+    if min_date:
+        min_publish_ms = int(datetime.strptime(str(min_date), "%Y-%m-%d").timestamp() * 1000)
     cfg = {
         "cookies": os.getenv("COOKIES", "").strip(),
         "smtp": {
@@ -34,6 +39,8 @@ def load_config():
             "user_sleep": settings.get("user_sleep", [30, 60]),
             "download_media": bool(settings.get("download_media", False)),
             "always_mail": bool(settings.get("always_mail", True)),
+            "min_publish_date": str(min_date) if min_date else None,
+            "min_publish_ms": min_publish_ms,
         },
         "users": users,
     }

@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>小红书竞品监测看板</title>
+<style>
+  :root {
+    --primary: #ff2442; --accent: #2563eb; --warn: #f59e0b; --ok: #22c55e;
+    --bg: #f8fafc; --surface: #ffffff; --text: #1e293b; --muted: #64748b;
+    --border: #e2e8f0; --hover: #f1f5f9; --overlay: rgba(15, 23, 42, .55);
+    --radius: 12px; --radius-s: 8px;
+    --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 24px; --space-6: 32px;
+    --shadow: 0 1px 3px rgba(15, 23, 42, .08); --shadow-lg: 0 8px 30px rgba(15, 23, 42, .16);
+  }
+  [data-theme="dark"] {
+    --bg: #0f172a; --surface: #1e293b; --text: #f8fafc; --muted: #94a3b8;
+    --border: #334155; --hover: #334155; --overlay: rgba(0, 0, 0, .65);
+    --shadow: 0 1px 3px rgba(0, 0, 0, .4); --shadow-lg: 0 8px 30px rgba(0, 0, 0, .5);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 14px/1.6 "PingFang SC", "Microsoft YaHei", system-ui, sans-serif; }
+  a { color: var(--accent); text-decoration: none; }
+  button { font: inherit; cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 4px; }
+  .wrap { max-width: 1400px; margin: 0 auto; padding: var(--space-5); }
+
+  header { display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap; margin-bottom: var(--space-5); }
+  h1 { font-size: 20px; margin: 0; display: flex; align-items: center; gap: var(--space-2); }
+  h1 .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--primary); }
+  .meta { color: var(--muted); font-size: 12px; }
+  .spacer { flex: 1; }
+  .theme-btn { background: var(--surface); color: var(--text); border: 1px solid var(--border);
+               border-radius: var(--radius-s); padding: 6px 12px; }
+  .theme-btn:hover { background: var(--hover); }
+
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: var(--space-3); margin-bottom: var(--space-5); }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+          padding: var(--space-4); box-shadow: var(--shadow); }
+  .stat .label { color: var(--muted); font-size: 12px; }
+  .stat .num { font-size: 28px; font-weight: 700; line-height: 1.2; }
+  .stat .num.red { color: var(--primary); } .stat .num.blue { color: var(--accent); }
+  .stat .num.amber { color: var(--warn); } .stat .num.green { color: var(--ok); }
+
+  .filters { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center;
+             background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+             padding: var(--space-3) var(--space-4); margin-bottom: var(--space-5); box-shadow: var(--shadow); }
+  .filters select, .filters input { background: var(--bg); color: var(--text); border: 1px solid var(--border);
+             border-radius: var(--radius-s); padding: 6px 10px; }
+  .filters input { width: 180px; }
+  .chip { background: var(--bg); color: var(--muted); border: 1px solid var(--border);
+          border-radius: 999px; padding: 5px 14px; font-size: 13px; }
+  .chip:hover { background: var(--hover); }
+  .chip.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .count { color: var(--muted); font-size: 12px; margin-left: auto; }
+
+  h2.sec { font-size: 16px; margin: var(--space-6) 0 var(--space-3); padding-left: 10px;
+           border-left: 4px solid var(--primary); }
+  .cobrand-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+                 box-shadow: var(--shadow); overflow: hidden; }
+  .cb-row { display: flex; gap: var(--space-3); align-items: center; padding: var(--space-3) var(--space-4);
+            border-bottom: 1px solid var(--border); cursor: pointer; flex-wrap: wrap; }
+  .cb-row:last-child { border-bottom: none; }
+  .cb-row:hover { background: var(--hover); }
+  .cb-pair { background: #fff1f0; color: var(--primary); border: 1px solid #ffccc7;
+             border-radius: 999px; padding: 2px 12px; font-weight: 600; white-space: nowrap; }
+  [data-theme="dark"] .cb-pair { background: #3f1d24; border-color: #7a2c3a; }
+  .cb-title { flex: 1; min-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cb-meta { color: var(--muted); font-size: 12px; white-space: nowrap; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--space-4); }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+          overflow: hidden; cursor: pointer; box-shadow: var(--shadow); transition: transform .15s, box-shadow .15s;
+          display: flex; flex-direction: column; }
+  .card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+  .cover { position: relative; aspect-ratio: 3/4; background: var(--hover); overflow: hidden; }
+  .cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .cover img.err { visibility: hidden; }
+  .cover .fallback { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+                     color: var(--muted); font-size: 24px; }
+  .badge { position: absolute; top: 8px; left: 8px; padding: 2px 10px; border-radius: 999px;
+           font-size: 12px; color: #fff; backdrop-filter: blur(4px); }
+  .badge.vid { background: rgba(37, 99, 235, .85); } .badge.img { background: rgba(255, 36, 66, .85); }
+  .badge.cb { background: rgba(245, 158, 11, .92); color: #fff; top: 8px; right: 8px; left: auto; }
+  .cbody { padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-1); flex: 1; }
+  .ctitle { font-weight: 600; font-size: 13px; display: -webkit-box; -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical; overflow: hidden; min-height: 2.6em; }
+  .cmeta { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; margin-top: auto; }
+  .cmeta b { color: var(--primary); font-weight: 600; }
+  .new-tag { color: var(--ok); font-weight: 600; }
+
+  .empty { text-align: center; color: var(--muted); padding: 60px 0; }
+  .empty .big { font-size: 40px; margin-bottom: var(--space-2); }
+
+  dialog { border: none; border-radius: var(--radius); background: var(--surface); color: var(--text);
+           max-width: 720px; width: calc(100% - 32px); max-height: 86vh; padding: 0; box-shadow: var(--shadow-lg); }
+  dialog::backdrop { background: var(--overlay); }
+  .dcover { width: 100%; max-height: 380px; object-fit: cover; display: block; background: var(--hover); }
+  .dbody { padding: var(--space-5); overflow-y: auto; max-height: calc(86vh - 380px); }
+  .dbody h3 { margin: 0 0 var(--space-2); font-size: 17px; }
+  .drow { display: flex; gap: var(--space-4); flex-wrap: wrap; color: var(--muted); font-size: 13px;
+          margin-bottom: var(--space-3); }
+  .drow b { color: var(--primary); }
+  .dpair { display: inline-block; background: #fff1f0; color: var(--primary); border: 1px solid #ffccc7;
+           border-radius: 999px; padding: 2px 12px; font-weight: 600; margin-bottom: var(--space-3); }
+  [data-theme="dark"] .dpair { background: #3f1d24; border-color: #7a2c3a; }
+  .dtags { color: var(--muted); font-size: 12px; margin-top: var(--space-3); }
+  .ddesc { white-space: pre-wrap; word-break: break-word; }
+  .dfoot { display: flex; gap: var(--space-3); padding: var(--space-3) var(--space-5);
+           border-top: 1px solid var(--border); align-items: center; }
+  .btn { background: var(--primary); color: #fff; border: none; border-radius: var(--radius-s);
+         padding: 8px 18px; }
+  .btn:hover { filter: brightness(.92); }
+  .btn.ghost { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+
+  footer { text-align: center; color: var(--muted); font-size: 12px; padding: var(--space-6) 0; }
+  @media (max-width: 640px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><span class="dot"></span>小红书竞品监测看板</h1>
+    <span class="meta" id="gen-time"></span>
+    <span class="spacer"></span>
+    <button class="theme-btn" id="theme-toggle" aria-label="切换主题">🌗 深浅切换</button>
+  </header>
+
+  <section class="stats" id="stats"></section>
+
+  <section class="filters" role="toolbar" aria-label="筛选器">
+    <select id="f-user" aria-label="按账号筛选"><option value="">全部账号</option></select>
+    <button class="chip on" data-type="" aria-pressed="true">全部</button>
+    <button class="chip" data-type="图集" aria-pressed="false">图文</button>
+    <button class="chip" data-type="视频" aria-pressed="false">视频</button>
+    <button class="chip" data-time="" aria-pressed="true">全部时间</button>
+    <button class="chip" data-time="1" aria-pressed="false">今日新增</button>
+    <button class="chip" data-time="7" aria-pressed="false">近7天</button>
+    <button class="chip" data-time="30" aria-pressed="false">近30天</button>
+    <button class="chip" id="f-cb" aria-pressed="false">🏷 只看联名</button>
+    <input id="f-search" type="search" placeholder="搜索标题 / 正文 / 话题…" aria-label="搜索">
+    <select id="f-sort" aria-label="排序">
+      <option value="time">最新发布</option>
+      <option value="liked">点赞最多</option>
+      <option value="collected">收藏最多</option>
+      <option value="comments">评论最多</option>
+    </select>
+    <span class="count" id="f-count"></span>
+  </section>
+
+  <h2 class="sec">🏷 联名内容专区</h2>
+  <div class="cobrand-box" id="cobrand-box"></div>
+
+  <h2 class="sec">笔记瀑布流</h2>
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty" hidden><div class="big">📭</div>没有符合条件的笔记，试试调整筛选器</div>
+
+  <footer>数据截至生成时间 · 由 xhs-monitor 自动生成 · 点击卡片查看详情</footer>
+</div>
+
+<dialog id="modal" aria-modal="true">
+  <img class="dcover" id="m-cover" alt="" loading="lazy">
+  <div class="dbody">
+    <h3 id="m-title"></h3>
+    <div class="drow" id="m-metrics"></div>
+    <div id="m-cb"></div>
+    <div class="ddesc" id="m-desc"></div>
+    <div class="dtags" id="m-tags"></div>
+  </div>
+  <div class="dfoot">
+    <span class="meta" id="m-meta"></span>
+    <span class="spacer" style="flex:1"></span>
+    <a class="btn ghost" id="m-link" target="_blank" rel="noopener">在小红书打开 ↗</a>
+    <button class="btn ghost" id="m-close" onclick="document.getElementById('modal').close()">关闭 (Esc)</button>
+  </div>
+</dialog>
+
+<script>
+const DATA = {{ data }};
+
+/* ---------- 主题 ---------- */
+const savedTheme = localStorage.getItem('xhs-theme');
+if (savedTheme) document.documentElement.dataset.theme = savedTheme;
+document.getElementById('theme-toggle').onclick = () => {
+  const t = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+  document.documentElement.dataset.theme = t;
+  localStorage.setItem('xhs-theme', t);
+};
+
+/* ---------- 工具 ---------- */
+const fmt = n => (n || 0).toLocaleString('zh-CN');
+const fmtTime = ms => { if (!ms) return '—';
+  const d = new Date(ms);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+const escapeHtml = s => (s || '').replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ---------- 状态 ---------- */
+const state = { user: '', type: '', time: 0, cb: false, search: '', sort: 'time' };
+
+/* ---------- 账号下拉 ---------- */
+const userSel = document.getElementById('f-user');
+DATA.accounts.forEach(a => {
+  const o = document.createElement('option');
+  o.value = a.uid;
+  o.textContent = `${a.nickname}（${a.total}篇${a.cobrand ? ' · 联名' + a.cobrand : ''}）`;
+  userSel.appendChild(o);
+});
+userSel.onchange = () => { state.user = userSel.value; render(); };
+
+/* ---------- 统计卡 ---------- */
+const today = new Date(); today.setHours(0, 0, 0, 0);
+const todayNew = DATA.notes.filter(n => n.time >= today.getTime()).length;
+const cobrandTotal = DATA.notes.filter(n => n.cobrand).length;
+document.getElementById('gen-time').textContent =
+  `数据截至 ${new Date().toLocaleString('zh-CN')} · 共 ${DATA.accounts.length} 个账号`;
+document.getElementById('stats').innerHTML = [
+  ['监测账号', DATA.accounts.length, 'blue'],
+  ['监测笔记总数', DATA.notes.length, ''],
+  ['今日新增', todayNew, 'red'],
+  ['联名内容', cobrandTotal, 'amber'],
+  ['总点赞', DATA.notes.reduce((s, n) => s + n.liked, 0), 'green'],
+].map(([l, v, c]) => `<div class="stat"><div class="label">${l}</div>
+  <div class="num ${c}">${fmt(v)}</div></div>`).join('');
+
+/* ---------- 筛选器 ---------- */
+document.querySelectorAll('[data-type]').forEach(b => b.onclick = () => {
+  document.querySelectorAll('[data-type]').forEach(x => { x.classList.remove('on'); x.setAttribute('aria-pressed', 'false'); });
+  b.classList.add('on'); b.setAttribute('aria-pressed', 'true');
+  state.type = b.dataset.type; render();
+});
+document.querySelectorAll('[data-time]').forEach(b => b.onclick = () => {
+  document.querySelectorAll('[data-time]').forEach(x => { x.classList.remove('on'); x.setAttribute('aria-pressed', 'false'); });
+  b.classList.add('on'); b.setAttribute('aria-pressed', 'true');
+  state.time = Number(b.dataset.time); render();
+});
+const cbBtn = document.getElementById('f-cb');
+cbBtn.onclick = () => { state.cb = !state.cb; cbBtn.classList.toggle('on', state.cb);
+  cbBtn.setAttribute('aria-pressed', String(state.cb)); render(); };
+let searchTimer;
+document.getElementById('f-search').oninput = e => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => { state.search = e.target.value.trim().toLowerCase(); render(); }, 250);
+};
+document.getElementById('f-sort').onchange = e => { state.sort = e.target.value; render(); };
+
+function filtered() {
+  let list = DATA.notes.filter(n => {
+    if (state.user && n.uid !== state.user) return false;
+    if (state.type && n.type !== state.type) return false;
+    if (state.cb && !n.cobrand) return false;
+    if (state.time) {
+      const daysAgo = new Date(); daysAgo.setDate(daysAgo.getDate() - state.time);
+      const bound = state.time === 1 ? today.getTime() : daysAgo.getTime();
+      if (n.time < bound) return false;
+    }
+    if (state.search) {
+      const hay = `${n.title} ${n.desc} ${n.tags} ${n.nickname} ${n.cobrand}`.toLowerCase();
+      if (!hay.includes(state.search)) return false;
+    }
+    return true;
+  });
+  const key = state.sort;
+  list.sort((a, b) => key === 'time' ? b.time - a.time : b[key] - a[key]);
+  return list;
+}
+
+/* ---------- 看板渲染 ---------- */
+const grid = document.getElementById('grid');
+const emptyEl = document.getElementById('empty');
+
+function noteCard(n) {
+  const isNew = n.time >= today.getTime();
+  const cover = n.cover
+    ? `<img src="${escapeHtml(n.cover)}" alt="" loading="lazy"
+        onerror="this.classList.add('err'); this.nextElementSibling.style.display='flex'">
+       <div class="fallback" style="display:none">📝</div>`
+    : `<div class="fallback">📝</div>`;
+  return `<article class="card" data-id="${escapeHtml(n.id)}" tabindex="0" role="button"
+            aria-label="${escapeHtml(n.title)}">
+    <div class="cover">${cover}
+      <span class="badge ${n.type === '视频' ? 'vid' : 'img'}">${n.type}</span>
+      ${n.cobrand ? '<span class="badge cb">联名</span>' : ''}
+    </div>
+    <div class="cbody">
+      <div class="ctitle">${escapeHtml(n.title)}</div>
+      <div class="cmeta"><span>${escapeHtml(n.nickname)}</span>
+        <span>${isNew ? '<span class="new-tag">NEW </span>' : ''}<b>❤ ${fmt(n.liked)}</b> ⭐ ${fmt(n.collected)}</span></div>
+      <div class="cmeta"><span>${fmtTime(n.time)}</span><span>💬 ${fmt(n.comments)}</span></div>
+    </div>
+  </article>`;
+}
+
+function render() {
+  const list = filtered();
+  grid.innerHTML = list.map(noteCard).join('');
+  emptyEl.hidden = list.length > 0;
+  document.getElementById('f-count').textContent = `共 ${list.length} 篇`;
+}
+
+/* ---------- 联名专区 ---------- */
+const cbNotes = DATA.notes.filter(n => n.cobrand).slice(0, 50);
+document.getElementById('cobrand-box').innerHTML = cbNotes.length
+  ? cbNotes.map(n => `<div class="cb-row" data-id="${escapeHtml(n.id)}" tabindex="0" role="button">
+      <span class="cb-pair">${escapeHtml(n.cobrand)}</span>
+      <span class="cb-title">${escapeHtml(n.title)}</span>
+      <span class="cb-meta">${escapeHtml(n.nickname)} · ${fmtTime(n.time)} · ❤ ${fmt(n.liked)}</span>
+    </div>`).join('')
+  : `<div class="empty"><div class="big">🏷</div>暂未识别到联名内容<br>
+     <span style="font-size:12px">识别规则：标题/正文中的「品牌A x 品牌B」格式，或包含「联名/合作款」关键词</span></div>`;
+
+/* ---------- 详情弹窗 ---------- */
+const modal = document.getElementById('modal');
+const byId = Object.fromEntries(DATA.notes.map(n => [n.id, n]));
+function openModal(id) {
+  const n = byId[id]; if (!n) return;
+  const cover = document.getElementById('m-cover');
+  if (n.cover) { cover.src = n.cover; cover.style.display = 'block'; }
+  else { cover.removeAttribute('src'); cover.style.display = 'none'; }
+  document.getElementById('m-title').textContent = n.title;
+  document.getElementById('m-metrics').innerHTML =
+    `<span>账号 <b>${escapeHtml(n.nickname)}</b></span><span>发布 ${fmtTime(n.time)}</span>` +
+    `<span>❤ <b>${fmt(n.liked)}</b></span><span>⭐ <b>${fmt(n.collected)}</b></span>` +
+    `<span>💬 <b>${fmt(n.comments)}</b></span><span>🔁 ${fmt(n.shares)}</span>` +
+    (n.detail ? '' : ' <span>（摘要数据）</span>');
+  document.getElementById('m-cb').innerHTML =
+    n.cobrand ? `<div class="dpair">🏷 联名：${escapeHtml(n.cobrand)}</div>` : '';
+  document.getElementById('m-desc').textContent = n.desc || '（详情未抓取，仅摘要）';
+  document.getElementById('m-tags').textContent = n.tags ? `# ${n.tags.split(',').join(' #')}` : '';
+  document.getElementById('m-meta').textContent = `入库时间 ${n.first_seen || '—'}`;
+  const link = document.getElementById('m-link');
+  link.href = n.url;
+  modal.showModal();
+}
+grid.onclick = e => { const c = e.target.closest('.card'); if (c) openModal(c.dataset.id); };
+grid.onkeydown = e => { if (e.key === 'Enter') { const c = e.target.closest('.card'); if (c) openModal(c.dataset.id); } };
+document.getElementById('cobrand-box').onclick = e => {
+  const r = e.target.closest('.cb-row'); if (r) openModal(r.dataset.id); };
+document.getElementById('cobrand-box').onkeydown = e => {
+  if (e.key === 'Enter') { const r = e.target.closest('.cb-row'); if (r) openModal(r.dataset.id); } };
+document.getElementById('m-close').onclick = () => modal.close();
+
+render();
+</script>
+</body>
+</html>

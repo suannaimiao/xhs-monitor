@@ -48,14 +48,18 @@ CREATE TABLE IF NOT EXISTS run_history (
 
 
 def connect():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=30)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA busy_timeout=30000")
     return conn
 
 
 def init_db():
     conn = connect()
     conn.executescript(SCHEMA)
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(notes)").fetchall()}
+    if "cobrand" not in cols:
+        conn.execute("ALTER TABLE notes ADD COLUMN cobrand TEXT DEFAULT ''")
     conn.commit()
     conn.close()
 
@@ -73,8 +77,8 @@ def upsert_note(conn, n: dict, detail_fetched: bool):
     conn.execute(
         """INSERT INTO notes (note_id, user_id, nickname, title, desc, note_type, publish_time,
              ip_location, tags, note_url, cover_url, liked_count, collected_count,
-             comment_count, share_count, detail_fetched, first_seen_at, detail_json)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+             comment_count, share_count, detail_fetched, first_seen_at, detail_json, cobrand)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
            ON CONFLICT(note_id) DO UPDATE SET
              liked_count=excluded.liked_count,
              collected_count=excluded.collected_count,
@@ -83,7 +87,8 @@ def upsert_note(conn, n: dict, detail_fetched: bool):
              detail_fetched=MAX(notes.detail_fetched, excluded.detail_fetched),
              detail_json=COALESCE(excluded.detail_json, notes.detail_json),
              desc=COALESCE(excluded.desc, notes.desc),
-             tags=COALESCE(excluded.tags, notes.tags)""",
+             tags=COALESCE(excluded.tags, notes.tags),
+             cobrand=COALESCE(NULLIF(excluded.cobrand,''), notes.cobrand)""",
         (
             n["note_id"], n["user_id"], n.get("nickname"), n.get("title"), n.get("desc"),
             n.get("note_type"), n.get("publish_time"), n.get("ip_location"), n.get("tags"),
@@ -92,6 +97,7 @@ def upsert_note(conn, n: dict, detail_fetched: bool):
             n.get("comment_count", 0), n.get("share_count", 0),
             1 if detail_fetched else 0, now(),
             json.dumps(n["raw"], ensure_ascii=False) if n.get("raw") else None,
+            n.get("cobrand", ""),
         ),
     )
 

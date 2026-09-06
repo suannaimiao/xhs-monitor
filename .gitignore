@@ -8,3 +8,4 @@ __pycache__/
 .venv/
 uv.lock
 .pytest_cache/
+list.txt

@@ -1,20 +1,81 @@
 settings:
-  # 单次运行每个账号最多拉取详情的新笔记数（防止首日全量拉爆）
-  max_details_per_user: 30
-  # 笔记详情请求之间随机间隔（秒）
-  detail_sleep: [5, 15]
-  # 账号之间随机间隔（秒）
-  user_sleep: [30, 60]
-  # 是否下载新笔记的无水印图片到 data/notes/<note_id>/images/
+  max_details_per_user: 60
+  detail_sleep:
+  - 3
+  - 8
+  user_sleep:
+  - 8
+  - 15
   download_media: false
-  # 是否每次运行都发送报告邮件（false 时仅在新增笔记/异常时发送）
   always_mail: true
-
+  min_publish_date: '2026-01-01'
 users:
-  - name: 竞品A
-    user_id: 6030f6b4000000000100a821
-    homepage: https://www.xiaohongshu.com/user/profile/6030f6b4000000000100a821?xsec_token=ABVjCTAhe0CPB8vWmxJ2EHxGl1zWBHzq4FIRx6loes3-c=&xsec_source=pc_user
-  # 若 user_posted 接口返回空，可补充带 xsec_token 的完整主页链接（从浏览器复制，会过期需更新）
-  # - name: 竞品C
-  #   user_id: xxxxxxxxxxxxxxxx
-  #   homepage: https://www.xiaohongshu.com/user/profile/xxx?xsec_token=AB...&xsec_source=pc_feed
+- name: 竞品01
+  user_id: 6406a83c0000000010025d92
+  homepage: https://www.xiaohongshu.com/user/profile/6406a83c0000000010025d92?xsec_token=AB3kuk3-X0_6sxbUDxLY7ESZ1JTq16ucIiT46L6n5C_IY%3D&xsec_source=pc_search
+- name: 竞品02
+  user_id: 6475da01000000001001f337
+  homepage: https://www.xiaohongshu.com/user/profile/6475da01000000001001f337?xsec_token=ABpHST7WTTee-iubMn_CMuysqaKzkd2VUyPD_robM_57c%3D&xsec_source=pc_search
+- name: 竞品03
+  user_id: 632a89d6000000002303a473
+  homepage: https://www.xiaohongshu.com/user/profile/632a89d6000000002303a473?xsec_token=ABdkxlGFUwr6yaIgxTye7aqlhBNGdpso1hiEfsiuGmILA%3D&xsec_source=pc_search
+- name: 竞品04
+  user_id: 67722e64000000001801d752
+  homepage: https://www.xiaohongshu.com/user/profile/67722e64000000001801d752?xsec_token=ABqlmCpv4eUjPcVy4ekmgDLmTfczplDq1HRInsMVCcDa8%3D&xsec_source=pc_search
+- name: 竞品05
+  user_id: 5ecc9c940000000001005d36
+  homepage: https://www.xiaohongshu.com/user/profile/5ecc9c940000000001005d36?xsec_token=ABJf1q35DXyuEJ8arqb7DmaQvXlWkgpJ0J_Ha1i6wyao4%3D&xsec_source=pc_search
+- name: 竞品06
+  user_id: 62ebe501000000001f004b0d
+  homepage: https://www.xiaohongshu.com/user/profile/62ebe501000000001f004b0d?xsec_token=ABfMJHryJHV2EPMNy2avD58V_qfslrgKRLYNWLG1FLY94%3D&xsec_source=pc_search
+- name: 竞品07
+  user_id: 6131beea0000000002021fef
+  homepage: https://www.xiaohongshu.com/user/profile/6131beea0000000002021fef?xsec_token=ABhfzBVl_sfl5bgn23bi4kT89IP-SM8VzdCHW2B1dHugM%3D&xsec_source=pc_search
+- name: 竞品08
+  user_id: 5c93243a000000001201f5f0
+  homepage: https://www.xiaohongshu.com/user/profile/5c93243a000000001201f5f0?xsec_token=ABpiKiGt6RczbeA76k8ZQ2PwoQEU32JvYnZncxVVfhYMs%3D&xsec_source=pc_search
+- name: 竞品09
+  user_id: 618a18bb0000000010004b1e
+  homepage: https://www.xiaohongshu.com/user/profile/618a18bb0000000010004b1e?xsec_token=AB90e84gU8RZ4W1ia7y_-8N57_MJLsffcw-hbQcyyL5cs%3D&xsec_source=pc_search
+- name: 竞品10
+  user_id: 64644a4c000000001f0319c4
+  homepage: https://www.xiaohongshu.com/user/profile/64644a4c000000001f0319c4?xsec_token=ABFxE9Kyik2pfqJbgZgwH9y9X9-Iz151CPfytYLbLPJaw%3D&xsec_source=pc_search
+- name: 竞品11
+  user_id: 61b1ad4b0000000010007076
+  homepage: https://www.xiaohongshu.com/user/profile/61b1ad4b0000000010007076?xsec_token=ABNiJybd9wivfd7VZYKNm7y8I46rSZjV9fVGAOZGqG6j0%3D&xsec_source=pc_search
+- name: 竞品12
+  user_id: 604ae5ba0000000001005b84
+  homepage: https://www.xiaohongshu.com/user/profile/604ae5ba0000000001005b84?xsec_token=ABOSgf0jUv2ghj4WjKF5Yio2P7qXGwMUyF_Z4ILsM7ckM%3D&xsec_source=pc_search
+- name: 竞品13
+  user_id: 59d766296eea88058aaeaa61
+  homepage: https://www.xiaohongshu.com/user/profile/59d766296eea88058aaeaa61?xsec_token=ABrCnOLorjgdMuHHK7H3XwOVCRELE5AhiOB3iN--rc4qg%3D&xsec_source=pc_search
+- name: 竞品14
+  user_id: 655c6b9d000000000802e2c2
+  homepage: https://www.xiaohongshu.com/user/profile/655c6b9d000000000802e2c2?xsec_token=AB7J_gb9OWQA7QyZ8J7FabRlLqpd-MVfaaXkTeb-aPh4A%3D&xsec_source=pc_search
+- name: 竞品15
+  user_id: 60e80c9f000000000100bccb
+  homepage: https://www.xiaohongshu.com/user/profile/60e80c9f000000000100bccb?xsec_token=ABsBHv3VAtUXopu7IWyxDb_ojOXtZoKS-bGipCXYnqVDA%3D&xsec_source=pc_search
+- name: 竞品16
+  user_id: 5b83c24eb8dca500016a02fd
+  homepage: https://www.xiaohongshu.com/user/profile/5b83c24eb8dca500016a02fd?xsec_token=ABZi6oMyn-uN2M4JxsbEPtt0UFgfd0NfvjU1iQ8comDs4%3D&xsec_source=pc_search
+- name: 竞品17
+  user_id: 5556c8ad3397db11c99eebc4
+  homepage: https://www.xiaohongshu.com/user/profile/5556c8ad3397db11c99eebc4?xsec_token=AB7fq-LUrHexcvOweqa2k98s9VjpnA6RUWgnoY8fvVMhs%3D&xsec_source=pc_search
+- name: 竞品18
+  user_id: 66cec7a5000000001d020bfe
+  homepage: https://www.xiaohongshu.com/user/profile/66cec7a5000000001d020bfe?xsec_token=ABkXtG5V0X237ikb6wfpfB62W49WIgX8CW7rGD2cdPbno%3D&xsec_source=pc_search
+- name: 竞品19
+  user_id: 620a1509000000001000a455
+  homepage: https://www.xiaohongshu.com/user/profile/620a1509000000001000a455?xsec_token=AB1JY3Mi5rgxSt8Adh2ovZXvy7qlC0dxHnjzooWDPfjrM%3D&xsec_source=pc_search
+- name: 竞品20
+  user_id: 5e5fd23300000000010023d4
+  homepage: https://www.xiaohongshu.com/user/profile/5e5fd23300000000010023d4?xsec_token=ABA4yvLlpz_THI3g0CFBEs7r0Q3KtUrM3M-hcwBNdVp4Q%3D&xsec_source=pc_search
+- name: 竞品21
+  user_id: 65fa8029000000000600eb09
+  homepage: https://www.xiaohongshu.com/user/profile/65fa8029000000000600eb09?xsec_token=ABxb_2zOZjsNHjSabpdSdEAWaenRIns9uCGNFIKaVfuXQ%3D&xsec_source=pc_search
+- name: 竞品22
+  user_id: 6053028f0000000001005503
+  homepage: https://www.xiaohongshu.com/user/profile/6053028f0000000001005503?xsec_token=ABWFdTWBLxh_y4vhWzFg683HzXXFa-QnipgQAF8uGq-gk%3D&xsec_source=pc_search
+- name: 竞品23
+  user_id: 661a60aa0000000007005075
+  homepage: https://www.xiaohongshu.com/user/profile/661a60aa0000000007005075?xsec_token=AB2infJ9V8GIYz_x9VZU4OKnGtJ0hggeZqDTg4dxQfIdI%3D&xsec_source=pc_search
