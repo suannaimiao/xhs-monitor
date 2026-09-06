@@ -20,6 +20,16 @@
   .badge.img { background: #fff1f0; color: #ff2442; } .badge.vid { background: #e6f7ff; color: #1890ff; }
   .meta { color: #888; font-size: 12px; }
   a { color: #1890ff; text-decoration: none; }
+  .cards { display: flex; flex-direction: column; gap: 14px; }
+  .ncard { background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.08); padding: 14px 16px; }
+  .nhead { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+  .nhead .nick { font-weight: 700; }
+  .nimgs { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 10px; }
+  .nimgs img { height: 150px; border-radius: 6px; object-fit: cover; flex-shrink: 0; }
+  .nimg1 img { height: 220px; }
+  .ndesc { font-size: 13px; color: #444; white-space: pre-wrap; word-break: break-word;
+           max-height: 120px; overflow: hidden; }
+  .nfoot { color: #888; font-size: 12px; margin-top: 8px; display: flex; gap: 14px; flex-wrap: wrap; }
   p.meta { margin-top: 40px; }
 </style>
 </head>
@@ -74,17 +84,31 @@
   {% endif %}
 
   <h2>本周全部笔记（{{ notes|length }} 篇）</h2>
-  <table>
-    <tr><th>账号</th><th>标题</th><th>类型</th><th>发布时间</th><th>点赞</th><th>收藏</th><th>评论</th></tr>
+  <div class="cards">
     {% for n in notes %}
-    <tr><td>{{ n.nickname }}</td>
-        <td><a href="{{ n.note_url }}">{{ n.title }}</a>{% if n.cobrand %} <span class="cb-pair">{{ n.cobrand }}</span>{% endif %}</td>
-        <td><span class="badge {{ 'vid' if n.note_type == '视频' else 'img' }}">{{ n.note_type }}</span></td>
-        <td class="meta">{{ fmt_ts(n.publish_time) }}</td>
-        <td>{{ '{:,}'.format(n.liked_count) }}</td><td>{{ '{:,}'.format(n.collected_count) }}</td>
-        <td>{{ '{:,}'.format(n.comment_count) }}</td></tr>
+    <div class="ncard">
+      <div class="nhead">
+        <span class="nick">{{ n.nickname }}</span>
+        <span class="badge {{ 'vid' if n.note_type == '视频' else 'img' }}">{{ n.note_type }}</span>
+        {% if n.cobrand %}<span class="cb-pair">{{ n.cobrand }}</span>{% endif %}
+        <span class="meta" style="margin-left:auto">{{ fmt_ts(n.publish_time) }}</span>
+      </div>
+      <div style="font-weight:600; margin-bottom:8px;"><a href="{{ n.note_url }}" style="color:#333">{{ n.title }}</a></div>
+      {% if n.images %}
+      <div class="nimgs {{ 'nimg1' if n.images|length == 1 }}">
+        {% for img in n.images %}<img src="{{ img }}" alt="">{% endfor %}
+      </div>
+      {% endif %}
+      {% if n.desc %}<div class="ndesc">{{ n.desc }}</div>{% endif %}
+      <div class="nfoot">
+        <span>❤ {{ '{:,}'.format(n.liked_count) }}</span><span>⭐ {{ '{:,}'.format(n.collected_count) }}</span>
+        <span>💬 {{ '{:,}'.format(n.comment_count) }}</span>
+        {% if n.tags %}<span>{{ n.tags }}</span>{% endif %}
+        <span style="margin-left:auto"><a href="{{ n.note_url }}">原文链接 ↗</a></span>
+      </div>
+    </div>
     {% endfor %}
-  </table>
+  </div>
 
   <p class="meta">Excel 明细见附件；交互式看板见 data/dashboard.html。由 xhs-monitor 自动生成。</p>
 </div>

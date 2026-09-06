@@ -14,6 +14,7 @@ from openpyxl.styles import Font, PatternFill
 from .config import BASE_DIR, DATA_DIR
 from .db import connect
 from .mailer import send_report
+from .media import _extract_media, build_zip
 
 TEMPLATE_DIR = BASE_DIR / "monitor" / "templates"
 HEADERS = ["账号", "标题", "类型", "发布时间", "点赞", "收藏", "评论", "分享", "联名", "话题", "链接"]
@@ -23,6 +24,14 @@ def _fmt_ts(ms):
     if not ms:
         return ""
     return datetime.fromtimestamp(ms / 1000).strftime("%Y-%m-%d %H:%M")
+
+
+def _enrich(n: dict) -> dict:
+    n["images"] = _extract_media(n.get("detail_json"))[0][:3]
+    if not n["images"] and n.get("cover_url"):
+        n["images"] = [n["cover_url"]]
+    n["title"] = n["title"] or "无标题"
+    return n
 
 
 def fetch_week(conn, days: int):
@@ -61,10 +70,11 @@ def build_excel(notes, path: Path):
 def main():
     days = int(sys.argv[1]) if len(sys.argv) > 1 else 7
     conn = connect()
-    notes, accounts = fetch_week(conn, days)
+    raw_notes, accounts = fetch_week(conn, days)
+    conn.close()
+    notes = [_enrich(n) for n in raw_notes]
     top = sorted(notes, key=lambda n: -n["liked_count"])[:10]
     cobrand_notes = [n for n in notes if n["cobrand"]]
-    conn.close()
 
     since = (datetime.now() - timedelta(days=days)).strftime("%m-%d")
     until = datetime.now().strftime("%m-%d")
@@ -82,11 +92,14 @@ def main():
     html_path = DATA_DIR / "reports" / f"weekly_{stamp}.html"
     html_path.write_text(html, encoding="utf-8")
 
+    logger.info(f"开始打包本周 {len(notes)} 篇笔记的媒体文件…")
+    zip_path = build_zip(notes, DATA_DIR / "media_zip" / f"竞品周报媒体_{stamp}.zip")
+
     from .config import load_config
     cfg = load_config()
     subject = f"【XHS竞品监测】周报 {since}~{until}：{len(notes)} 篇笔记，{len(cobrand_notes)} 篇联名"
-    ok = send_report(cfg, subject, html, excel_path, html_path)
-    logger.info(f"周报已{'发送' if ok else '生成（SMTP未配置，跳过邮件）'}: {html_path}, {excel_path}")
+    ok = send_report(cfg, subject, html, excel_path, html_path, zip_path)
+    logger.info(f"周报已{'发送' if ok else '生成（SMTP未配置，跳过邮件）'}: {html_path}, {excel_path}, {zip_path}")
 
 
 if __name__ == "__main__":

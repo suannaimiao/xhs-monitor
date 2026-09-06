@@ -12,7 +12,7 @@ from .config import BASE_DIR
 
 
 def _connect_smtp(cfg):
-    smtp = smtplib.SMTP_SSL(cfg["smtp"]["host"], cfg["smtp"]["port"], timeout=30)
+    smtp = smtplib.SMTP_SSL(cfg["smtp"]["host"], cfg["smtp"]["port"], timeout=120)
     smtp.login(cfg["smtp"]["user"], cfg["smtp"]["pass"])
     return smtp
 
@@ -44,8 +44,8 @@ def _send(cfg, subject: str, html: str, attachments=None):
     return True
 
 
-def send_report(cfg, subject: str, html: str, excel_path=None, report_html_path=None):
-    return _send(cfg, subject, html, [excel_path, report_html_path])
+def send_report(cfg, subject: str, html: str, *attachments):
+    return _send(cfg, subject, html, list(attachments))
 
 
 def send_alert(cfg, title: str, detail: str):

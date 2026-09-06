@@ -4,6 +4,7 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 
 from .config import BASE_DIR, DATA_DIR
+from .media import _extract_media
 
 TEMPLATE_DIR = BASE_DIR / "monitor" / "templates"
 
@@ -22,9 +23,12 @@ def _collect_dashboard_data(conn) -> dict:
     for r in conn.execute(
         """SELECT note_id, user_id, nickname, title, desc, note_type, publish_time, tags,
              note_url, cover_url, liked_count, collected_count, comment_count, share_count,
-             detail_fetched, cobrand, first_seen_at
+             detail_fetched, cobrand, first_seen_at, detail_json
            FROM notes ORDER BY publish_time DESC"""
     ).fetchall():
+        images, _ = _extract_media(r["detail_json"])
+        if not images and r["cover_url"]:
+            images = [r["cover_url"]]
         notes.append({
             "id": r["note_id"],
             "uid": r["user_id"],
@@ -36,6 +40,7 @@ def _collect_dashboard_data(conn) -> dict:
             "tags": r["tags"] or "",
             "url": r["note_url"],
             "cover": r["cover_url"] or "",
+            "images": images[:6],
             "liked": r["liked_count"], "collected": r["collected_count"],
             "comments": r["comment_count"], "shares": r["share_count"],
             "detail": bool(r["detail_fetched"]),
