@@ -12,9 +12,8 @@ settings:
 
 users:
   - name: 竞品A
-    user_id: 64c3f392000000002b009e45
-  - name: 竞品B
-    user_id: 000000000000000000
+    user_id: 6030f6b4000000000100a821
+    homepage: https://www.xiaohongshu.com/user/profile/6030f6b4000000000100a821?xsec_token=ABVjCTAhe0CPB8vWmxJ2EHxGl1zWBHzq4FIRx6loes3-c=&xsec_source=pc_user
   # 若 user_posted 接口返回空，可补充带 xsec_token 的完整主页链接（从浏览器复制，会过期需更新）
   # - name: 竞品C
   #   user_id: xxxxxxxxxxxxxxxx

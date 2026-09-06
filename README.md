@@ -4,17 +4,46 @@
 
 `apis/`、`xhs_utils/` 目录 vendor 自上游 Spider_XHS（仅学习交流用途），采集签名依赖本地 Node.js（20+）与 `node_modules/crypto-js`（已 `npm install`）。
 
-## 快速开始
+## 获取登录 Cookie
+
+**方式一（推荐）：脚本登录，全自动**
 
 ```bash
-uv sync          # Python 依赖
-npm install      # 签名算法依赖
-cp .env.example .env   # 然后填写 COOKIES 与 SMTP 配置
+uv run python -m monitor.login           # 手机号 + 短信验证码
+# 或
+uv run python -m monitor.login --qrcode  # 终端显示二维码，小红书 App 扫码
 ```
 
-1. **配置 Cookie**：浏览器登录小红书 → F12 → Network → 任意请求 → 复制完整 Cookie → 填入 `.env` 的 `COOKIES`（约 2~4 周失效一次，失效会收到告警邮件）。
-2. **配置竞品清单**：编辑 `watchlist.yaml`，填入竞品 `user_id`（主页链接 `https://www.xiaohongshu.com/user/profile/<user_id>` 中的一段）。
-3. **配置邮件**：`.env` 中填 SMTP（QQ 邮箱用授权码）。
+按提示输入手机号和收到的验证码，成功后 Cookie 自动写入 `.env`。
+
+**方式二：手动抓取**
+
+1. 电脑浏览器打开并登录 `xiaohongshu.com`
+2. 按 `F12` 打开开发者工具 → 切到 `Network`（网络）标签
+3. 刷新页面，点列表中任意一个请求 → 右侧 `Headers`（标头）
+4. 找到 `Request Headers` 下的 `Cookie:`，**右键 → 复制值**（完整一长串）
+5. 粘贴到 `.env` 的 `COOKIES=''` 单引号内，保存
+
+Cookie 约 2~4 周失效，失效会收到 `[告警] Cookie 失效` 邮件，重新执行方式一即可。
+
+## 添加竞品账号
+
+竞品 `user_id` 就在其主页链接中：
+
+```
+https://www.xiaohongshu.com/user/profile/6030f6b4000000000100a821?xsec_token=...
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^ 这一段就是 user_id
+```
+
+编辑 `watchlist.yaml`：
+
+```yaml
+users:
+  - name: 竞品A
+    user_id: 6030f6b4000000000100a821
+```
+
+一般只填 `user_id` 即可；若采集返回为空（链接 token 过期），在浏览器打开其主页，复制**带 `xsec_token` 参数的完整链接**填到 `homepage` 字段（token 会过期，过期后重新复制一次）。
 
 ## 运行
 
