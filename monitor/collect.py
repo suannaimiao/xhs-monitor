@@ -195,7 +195,8 @@ def collect_user(api, conn, user: dict, cfg: dict, run_at: str, errors: list) ->
             seen_ids.add(nid)
             stats["total_seen"] += 1
             is_new = nid not in known
-            if is_new and stats["detail_fetched"] < max_details:
+            # 新笔记拉详情；已有但缺详情的笔记（历史回填）也补
+            if (is_new or not known.get(nid)) and stats["detail_fetched"] < max_details:
                 time.sleep(random.uniform(*cfg["settings"]["detail_sleep"]))
                 ok, dmsg, res = api.get_note_info(s["note_url"])
                 if ok:
@@ -208,7 +209,7 @@ def collect_user(api, conn, user: dict, cfg: dict, run_at: str, errors: list) ->
                     errors.append(f"[{name}] 详情失败 {nid}: {dmsg}")
             if not s.get("cobrand"):
                 s["cobrand"] = detect_cobrand(s["title"], s.get("desc", ""), s.get("tags", ""))
-            upsert_note(conn, s, detail_fetched=is_new and "desc" in s)
+            upsert_note(conn, s, detail_fetched="desc" in s)
             insert_metrics(conn, nid, s["liked_count"], s["collected_count"],
                            s["comment_count"], s["share_count"])
             if is_new:

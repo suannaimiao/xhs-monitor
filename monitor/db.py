@@ -68,9 +68,9 @@ def now() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
-def known_note_ids(conn, user_id: str) -> set:
-    rows = conn.execute("SELECT note_id FROM notes WHERE user_id=?", (user_id,)).fetchall()
-    return {r["note_id"] for r in rows}
+def known_note_ids(conn, user_id: str) -> dict:
+    rows = conn.execute("SELECT note_id, detail_fetched FROM notes WHERE user_id=?", (user_id,)).fetchall()
+    return {r["note_id"]: bool(r["detail_fetched"]) for r in rows}
 
 
 def upsert_note(conn, n: dict, detail_fetched: bool):
