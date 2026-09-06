@@ -13,6 +13,3 @@ dependencies = [
     "retry>=0.9.2",
 ]
 
-[project.scripts]
-xhs-monitor = "monitor.run:main"
-

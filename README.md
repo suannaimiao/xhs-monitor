@@ -48,9 +48,9 @@ users:
 ## 运行
 
 ```bash
-uv run xhs-monitor            # 采集 + 报告 + 邮件
-uv run xhs-monitor --no-mail  # 只采集出报告，不发邮件（调试用）
-uv run xhs-monitor --collect-only  # 只采集入库
+uv run python -m monitor.run            # 采集 + 报告 + 邮件
+uv run python -m monitor.run --no-mail  # 只采集出报告，不发邮件（调试用）
+uv run python -m monitor.run --collect-only  # 只采集入库
 ```
 
 ## 定时（cron）
@@ -58,7 +58,7 @@ uv run xhs-monitor --collect-only  # 只采集入库
 ```bash
 crontab -e
 # 每天 08:00 运行：
-0 8 * * * cd /home/yefu/xhs-monitor && /home/yefu/.local/bin/uv run xhs-monitor >> logs/cron.log 2>&1
+0 8 * * * cd /home/yefu/xhs-monitor && /home/yefu/.local/bin/uv run python -m monitor.run >> logs/cron.log 2>&1
 ```
 
 ## 输出

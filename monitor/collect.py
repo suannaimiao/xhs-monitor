@@ -25,6 +25,27 @@ def health_check(api) -> tuple[bool, str]:
     return success, f"登录态正常: {nickname}" if success else f"Cookie 失效或异常: {msg}"
 
 
+def _int_cn(v) -> int:
+    if v is None:
+        return 0
+    s = str(v).strip().replace(",", "")
+    try:
+        return int(float(s))
+    except ValueError:
+        pass
+    mult = 1
+    if s.endswith("万"):
+        mult, s = 10_000, s[:-1]
+    elif s.endswith("亿"):
+        mult, s = 100_000_000, s[:-1]
+    elif s.endswith("w"):
+        mult, s = 10_000, s[:-1]
+    try:
+        return int(float(s) * mult)
+    except ValueError:
+        return 0
+
+
 def _summary_from_card(card: dict, user_id: str) -> dict:
     interact = card.get("interact_info") or {}
     cover = (card.get("cover") or {}).get("url_default") or (
@@ -37,10 +58,10 @@ def _summary_from_card(card: dict, user_id: str) -> dict:
         "title": (card.get("display_title") or "").strip() or "无标题",
         "note_type": "视频" if card.get("type") == "video" else "图集",
         "publish_time": card.get("time"),
-        "liked_count": int(str(interact.get("liked_count", "0")).replace(",", "") or 0),
-        "collected_count": int(str(interact.get("collected_count", "0")).replace(",", "") or 0),
-        "comment_count": int(str(interact.get("comment_count", "0")).replace(",", "") or 0),
-        "share_count": int(str(interact.get("share_count", "0")).replace(",", "") or 0),
+        "liked_count": _int_cn(interact.get("liked_count")),
+        "collected_count": _int_cn(interact.get("collected_count")),
+        "comment_count": _int_cn(interact.get("comment_count")),
+        "share_count": _int_cn(interact.get("share_count")),
         "note_url": NOTE_URL_TPL.format(note_id=card.get("note_id") or card.get("id"),
                                         token=card.get("xsec_token", "")),
         "cover_url": cover,
@@ -52,20 +73,14 @@ def _detail_from_note_info(item: dict) -> dict:
     nc = item.get("note_card") or {}
     interact = nc.get("interact_info") or {}
 
-    def _int(v):
-        try:
-            return int(str(v).replace(",", ""))
-        except (ValueError, TypeError):
-            return 0
-
     return {
         "title": (nc.get("title") or "").strip() or "无标题",
         "desc": nc.get("desc", ""),
         "note_type": "图集" if nc.get("type") == "normal" else "视频",
-        "liked_count": _int(interact.get("liked_count")),
-        "collected_count": _int(interact.get("collected_count")),
-        "comment_count": _int(interact.get("comment_count")),
-        "share_count": _int(interact.get("share_count")),
+        "liked_count": _int_cn(interact.get("liked_count")),
+        "collected_count": _int_cn(interact.get("collected_count")),
+        "comment_count": _int_cn(interact.get("comment_count")),
+        "share_count": _int_cn(interact.get("share_count")),
         "ip_location": nc.get("ip_location", "未知"),
         "tags": ",".join(t["name"] for t in (nc.get("tag_list") or []) if isinstance(t, dict) and t.get("name")),
         "publish_time": nc.get("time"),
