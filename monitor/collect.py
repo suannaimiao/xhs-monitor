@@ -227,11 +227,16 @@ def collect_all(api, cfg: dict) -> dict:
     conn = connect()
     errors = []
     stats_list = []
+    cookie_expired = False
     for i, user in enumerate(cfg["users"]):
-        if i > 0:
+        if i > 0 and not cookie_expired:
             time.sleep(random.uniform(*cfg["settings"]["user_sleep"]))
         stats_list.append(collect_user(api, conn, user, cfg, run_at, errors))
         logger.info(f"[{user.get('name')}] 完成: {stats_list[-1]}")
+        if any("登录已过期" in e for e in errors):
+            cookie_expired = True
+            errors.append("检测到登录态失效，本轮剩余账号已跳过")
+            break
     duration = time.time() - start
     total_new = sum(s["new_notes"] for s in stats_list)
     from .db import record_run
@@ -243,5 +248,6 @@ def collect_all(api, cfg: dict) -> dict:
         "stats": stats_list,
         "new_total": total_new,
         "errors": errors,
+        "cookie_expired": cookie_expired,
         "duration_s": round(duration, 1),
     }

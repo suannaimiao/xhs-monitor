@@ -40,6 +40,9 @@ def main():
         result = collect_all(api, cfg)
         result["new_notes"] = new_notes_this_run(conn, result["run_at"])
         logger.info(f"采集完成: 新增 {result['new_total']} 篇, 耗时 {result['duration_s']}s, 异常 {len(result['errors'])}")
+        if result.get("cookie_expired"):
+            send_alert(cfg, "Cookie 已过期，本轮采集中断",
+                       "采集过程中登录态失效，本轮剩余账号已跳过。\n请执行：cd /home/yefu/xhs-monitor && uv run python -m monitor.login")
 
         if args.collect_only:
             return

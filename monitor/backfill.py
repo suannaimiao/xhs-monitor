@@ -11,6 +11,7 @@ from .collect import build_api, collect_all, health_check
 from .config import ensure_dirs, load_config
 from .dashboard import build_dashboard
 from .db import connect, init_db
+from .mailer import send_alert
 
 
 def remaining_details(conn) -> int:
@@ -41,6 +42,14 @@ def main():
         logger.info(f"===== 回填第 {i}/{rounds} 轮（剩余待补详情 {left_before} 篇）=====")
         result = collect_all(api, cfg)
         logger.info(f"第 {i} 轮完成: 新增 {result['new_total']}, 详情 {sum(s['detail_fetched'] for s in result['stats'])}, 异常 {len(result['errors'])}")
+        if result.get("cookie_expired"):
+            send_alert(cfg, "Cookie 已过期，采集已停止",
+                       "监测到小红书登录态失效（接口返回：登录已过期）。\n\n"
+                       "请在项目目录执行：\n"
+                       "  cd /home/yefu/xhs-monitor\n"
+                       "  uv run python -m monitor.login\n\n"
+                       "登录后运行 uv run python -m monitor.backfill 可继续补齐详情。")
+            break
     conn.close()
     path = build_dashboard(cfg)
     logger.success(f"回填结束，看板已生成: {path}")
