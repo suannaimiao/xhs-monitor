@@ -1,0 +1,10 @@
+# 环境与数据
+.env
+data/
+logs/
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+uv.lock
+.pytest_cache/

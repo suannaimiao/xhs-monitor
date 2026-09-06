@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>XHS 竞品监测报告 {{ run_at }}</title>
+<style>
+  body { font-family: "PingFang SC", "Microsoft YaHei", sans-serif; margin: 0; background: #f5f6f8; color: #333; }
+  .container { max-width: 1000px; margin: 0 auto; padding: 24px; }
+  h1 { font-size: 20px; } h2 { font-size: 16px; margin-top: 32px; border-left: 4px solid #ff2442; padding-left: 10px; }
+  .cards { display: flex; gap: 12px; flex-wrap: wrap; }
+  .card { background: #fff; border-radius: 8px; padding: 14px 18px; flex: 1; min-width: 200px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .card .name { font-weight: 600; } .card .num { font-size: 22px; color: #ff2442; font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; background: #fff; font-size: 13px; }
+  th, td { padding: 8px 10px; border-bottom: 1px solid #eee; text-align: left; vertical-align: top; }
+  th { background: #fafafa; white-space: nowrap; }
+  .badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; }
+  .badge.img { background: #fff1f0; color: #ff2442; } .badge.vid { background: #e6f7ff; color: #1890ff; }
+  .hot .growth { color: #ff2442; font-weight: 700; }
+  .err { background: #fff2f0; border: 1px solid #ffccc7; padding: 10px 14px; border-radius: 6px; font-size: 13px; white-space: pre-wrap; }
+  .meta { color: #888; font-size: 12px; }
+  a { color: #1890ff; text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>小红书竞品监测日报</h1>
+  <p class="meta">运行时间：{{ run_at }} ｜ 耗时 {{ duration }}s ｜ 本期新增 {{ new_notes|length }} 篇</p>
+
+  <h2>账号概况</h2>
+  <div class="cards">
+    {% for s in stats %}
+    <div class="card">
+      <div class="name">{{ s.name }}</div>
+      <div>本期新增 <span class="num">{{ s.new_notes }}</span> 篇</div>
+      <div class="meta">拉取可见 {{ s.total_seen }} 篇 ｜ 详情 {{ s.detail_fetched }} 篇</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if hot_notes %}
+  <h2>互动增长 Top（与上期快照对比）</h2>
+  <table class="hot">
+    <tr><th>笔记</th><th>账号</th><th>点赞增长</th><th>当前点赞</th><th>收藏</th><th>评论</th></tr>
+    {% for n in hot_notes %}
+    <tr>
+      <td><a href="{{ n.note_url }}">{{ n.title }}</a></td>
+      <td>{{ n.nickname }}</td>
+      <td class="growth">+{{ n.liked_growth }}</td>
+      <td>{{ n.liked_count }}</td>
+      <td>{{ n.collected_count }}</td>
+      <td>{{ n.comment_count }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+
+  <h2>本期新增笔记</h2>
+  {% if new_notes %}
+  <table>
+    <tr><th>标题</th><th>类型</th><th>发布时间</th><th>点赞</th><th>收藏</th><th>评论</th><th>分享</th><th>话题</th></tr>
+    {% for n in new_notes %}
+    <tr>
+      <td><a href="{{ n.note_url }}">{{ n.title }}</a>{% if n.desc %}<br><span class="meta">{{ n.desc[:80] }}{% if n.desc|length > 80 %}…{% endif %}</span>{% endif %}</td>
+      <td><span class="badge {{ 'vid' if n.note_type == '视频' else 'img' }}">{{ n.note_type }}</span></td>
+      <td>{{ fmt_ts(n.publish_time) }}</td>
+      <td>{{ n.liked_count }}</td><td>{{ n.collected_count }}</td><td>{{ n.comment_count }}</td><td>{{ n.share_count }}</td>
+      <td class="meta">{{ n.tags }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="meta">本期无新增笔记。</p>
+  {% endif %}
+
+  {% if errors %}
+  <h2>异常记录</h2>
+  <div class="err">{% for e in errors %}{{ e }}
+{% endfor %}</div>
+  {% endif %}
+
+  <p class="meta">Excel 汇总表见附件；完整报告与历史数据见服务器 data/ 目录。</p>
+</div>
+</body>
+</html>

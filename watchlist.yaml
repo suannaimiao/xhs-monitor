@@ -1,0 +1,21 @@
+settings:
+  # 单次运行每个账号最多拉取详情的新笔记数（防止首日全量拉爆）
+  max_details_per_user: 30
+  # 笔记详情请求之间随机间隔（秒）
+  detail_sleep: [5, 15]
+  # 账号之间随机间隔（秒）
+  user_sleep: [30, 60]
+  # 是否下载新笔记的无水印图片到 data/notes/<note_id>/images/
+  download_media: false
+  # 是否每次运行都发送报告邮件（false 时仅在新增笔记/异常时发送）
+  always_mail: true
+
+users:
+  - name: 竞品A
+    user_id: 64c3f392000000002b009e45
+  - name: 竞品B
+    user_id: 000000000000000000
+  # 若 user_posted 接口返回空，可补充带 xsec_token 的完整主页链接（从浏览器复制，会过期需更新）
+  # - name: 竞品C
+  #   user_id: xxxxxxxxxxxxxxxx
+  #   homepage: https://www.xiaohongshu.com/user/profile/xxx?xsec_token=AB...&xsec_source=pc_feed
