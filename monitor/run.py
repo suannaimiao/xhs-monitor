@@ -4,7 +4,7 @@ import traceback
 
 from loguru import logger
 
-from .collect import build_api, collect_all, health_check
+from .collect import build_api, collect_all, health_check, sweep_unfetched
 from .config import ensure_dirs, load_config, LOGS_DIR
 from .dashboard import build_dashboard
 from .db import connect, init_db, new_notes_this_run
@@ -43,6 +43,8 @@ def main():
         if result.get("cookie_expired"):
             send_alert(cfg, "Cookie 已过期，本轮采集中断",
                        "采集过程中登录态失效，本轮剩余账号已跳过。\n请执行：cd /home/yefu/xhs-monitor && uv run python -m monitor.login")
+        else:
+            sweep_unfetched(api, conn, cfg)
 
         if args.collect_only:
             return
