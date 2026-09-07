@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>小红书竞品监测看板</title>
+<title>{{ title or '小红书竞品监测看板' }}</title>
 <style>
   :root {
     --primary: #ff2442; --accent: #2563eb; --warn: #f59e0b; --ok: #22c55e;
@@ -125,7 +125,7 @@
 <body>
 <div class="wrap">
   <header>
-    <h1><span class="dot"></span>小红书竞品监测看板</h1>
+    <h1><span class="dot"></span>{{ title or '小红书竞品监测看板' }}</h1>
     <span class="meta" id="gen-time"></span>
     <span class="spacer"></span>
     <button class="theme-btn" id="theme-toggle" aria-label="切换主题">🌗 深浅切换</button>

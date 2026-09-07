@@ -50,13 +50,20 @@ def _collect_dashboard_data(conn) -> dict:
     return {"accounts": accounts, "notes": notes}
 
 
-def build_dashboard(cfg=None) -> Path:
+def build_dashboard(cfg=None, cobrand_only: bool = False) -> Path:
     from .db import connect
     conn = connect()
     data = _collect_dashboard_data(conn)
     conn.close()
+    if cobrand_only:
+        data["notes"] = [n for n in data["notes"] if n["cobrand"]]
+        uid_set = {n["uid"] for n in data["notes"]}
+        data["accounts"] = [a for a in data["accounts"] if a["uid"] in uid_set]
     env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
-    html = env.get_template("dashboard.html.j2").render(data=json.dumps(data, ensure_ascii=False))
-    path = DATA_DIR / "dashboard.html"
+    html = env.get_template("dashboard.html.j2").render(
+        data=json.dumps(data, ensure_ascii=False),
+        title="小红书联名内容看板" if cobrand_only else "小红书竞品监测看板",
+    )
+    path = DATA_DIR / ("dashboard_cobrand.html" if cobrand_only else "dashboard.html")
     path.write_text(html, encoding="utf-8")
     return path

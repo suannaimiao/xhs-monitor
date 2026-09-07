@@ -74,6 +74,9 @@ def known_note_ids(conn, user_id: str) -> dict:
 
 
 def upsert_note(conn, n: dict, detail_fetched: bool):
+    # 仅当 raw 是真正的详情（含 note_card）时才覆盖 detail_json，防止列表卡片覆盖已抓详情
+    raw = n.get("raw")
+    detail_json = json.dumps(raw, ensure_ascii=False) if raw and "note_card" in raw else None
     conn.execute(
         """INSERT INTO notes (note_id, user_id, nickname, title, desc, note_type, publish_time,
              ip_location, tags, note_url, cover_url, liked_count, collected_count,
@@ -96,7 +99,7 @@ def upsert_note(conn, n: dict, detail_fetched: bool):
             n.get("liked_count", 0), n.get("collected_count", 0),
             n.get("comment_count", 0), n.get("share_count", 0),
             1 if detail_fetched else 0, now(),
-            json.dumps(n["raw"], ensure_ascii=False) if n.get("raw") else None,
+            detail_json,
             n.get("cobrand", ""),
         ),
     )
