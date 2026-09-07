@@ -1,3 +1,4 @@
+import json
 import random
 import re
 import time
@@ -219,6 +220,35 @@ def collect_user(api, conn, user: dict, cfg: dict, run_at: str, errors: list) ->
         logger.error(f"[{name}] 采集异常: {e}")
         errors.append(f"[{name}] {e}")
     return stats
+
+
+def sweep_unfetched(api, conn, cfg, batch=300) -> int:
+    """直接按存储的 URL 补齐已不在主页清单中的笔记详情（被删除/隐藏的笔记）。"""
+    rows = conn.execute(
+        "SELECT note_id, note_url, user_id, nickname FROM notes WHERE detail_fetched=0 LIMIT ?",
+        (batch,)).fetchall()
+    ok_count = 0
+    for r in rows:
+        time.sleep(random.uniform(*cfg["settings"]["detail_sleep"]))
+        ok, msg, res = api.get_note_info(r["note_url"])
+        if not ok:
+            logger.warning(f"[sweep] 详情失败 {r['note_id']}: {msg}")
+            continue
+        item = (res or {}).get("data", {}).get("items", [{}])[0]
+        d = _detail_from_note_info(item)
+        conn.execute(
+            """UPDATE notes SET desc=?, tags=?, ip_location=?, liked_count=?, collected_count=?,
+                 comment_count=?, share_count=?, detail_fetched=1, detail_json=?,
+                 cobrand=COALESCE(NULLIF(?,''), cobrand) WHERE note_id=?""",
+            (d["desc"], d["tags"], d["ip_location"], d["liked_count"], d["collected_count"],
+             d["comment_count"], d["share_count"], json.dumps(item, ensure_ascii=False),
+             d["cobrand"], r["note_id"]))
+        insert_metrics(conn, r["note_id"], d["liked_count"], d["collected_count"],
+                       d["comment_count"], d["share_count"])
+        ok_count += 1
+    conn.commit()
+    logger.info(f"[sweep] 补齐 {ok_count}/{len(rows)} 篇清单外笔记详情")
+    return ok_count
 
 
 def collect_all(api, cfg: dict) -> dict:

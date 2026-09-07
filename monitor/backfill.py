@@ -7,7 +7,7 @@ import sys
 
 from loguru import logger
 
-from .collect import build_api, collect_all, health_check
+from .collect import build_api, collect_all, health_check, sweep_unfetched
 from .config import ensure_dirs, load_config
 from .dashboard import build_dashboard
 from .db import connect, init_db
@@ -50,6 +50,9 @@ def main():
                        "  uv run python -m monitor.login\n\n"
                        "登录后运行 uv run python -m monitor.backfill 可继续补齐详情。")
             break
+        conn = connect()
+        sweep_unfetched(api, conn, cfg)
+        conn.close()
     conn.close()
     path = build_dashboard(cfg)
     logger.success(f"回填结束，看板已生成: {path}")
