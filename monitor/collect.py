@@ -248,6 +248,8 @@ def sweep_unfetched(api, conn, cfg, max_notes: int = 0) -> int:
             ok, msg, res = api.get_note_info(r["note_url"])
             attempted.add(r["note_id"])
             if not ok:
+                if "登录已过期" in str(msg):
+                    raise RuntimeError("登录已过期")
                 logger.warning(f"[sweep] 详情失败 {r['note_id']}: {msg}")
                 continue
             item = (res or {}).get("data", {}).get("items", [{}])[0]

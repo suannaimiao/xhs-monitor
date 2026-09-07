@@ -58,7 +58,7 @@ def build_dashboard(cfg=None, cobrand_only: bool = False) -> Path:
     if cobrand_only:
         data["notes"] = [n for n in data["notes"] if n["cobrand"]]
         uid_set = {n["uid"] for n in data["notes"]}
-        data["accounts"] = [a for a in data["accounts"] if a["uid"] in uid_set]
+        data["accounts"] = [a for a in data["accounts"] if a["user_id"] in uid_set]
     env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
     html = env.get_template("dashboard.html.j2").render(
         data=json.dumps(data, ensure_ascii=False),
