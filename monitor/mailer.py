@@ -50,7 +50,22 @@ def send_report(cfg, subject: str, html: str, *attachments):
 
 
 def send_alert(cfg, title: str, detail: str):
+    # 同标题告警 6 小时内只发一次，避免 cron 周期任务告警轰炸
+    import time
+    state = BASE_DIR / "data" / ".alert_state.json"
+    import json
+    try:
+        last = json.loads(state.read_text()) if state.exists() else {}
+    except Exception:
+        last = {}
+    if time.time() - last.get(title, 0) < 6 * 3600:
+        logger.info(f"告警节流中，跳过: {title}")
+        return False
     from jinja2 import Environment, FileSystemLoader
     env = Environment(loader=FileSystemLoader(BASE_DIR / "monitor" / "templates"))
     html = env.get_template("alert.html.j2").render(title=title, detail=detail)
-    return _send(cfg, f"[告警] XHS竞品监测: {title}", html, to=cfg["smtp"]["alert_to"])
+    ok = _send(cfg, f"[告警] XHS竞品监测: {title}", html, to=cfg["smtp"]["alert_to"])
+    if ok:
+        last[title] = time.time()
+        state.write_text(json.dumps(last))
+    return ok
