@@ -27,20 +27,21 @@ def _attach(msg: MIMEMultipart, path: Path):
     msg.attach(part)
 
 
-def _send(cfg, subject: str, html: str, attachments=None):
-    if not (cfg["smtp"]["host"] and cfg["smtp"]["user"] and cfg["smtp"]["pass"] and cfg["smtp"]["to"]):
+def _send(cfg, subject: str, html: str, attachments=None, to=None):
+    to = to or cfg["smtp"]["to"]
+    if not (cfg["smtp"]["host"] and cfg["smtp"]["user"] and cfg["smtp"]["pass"] and to):
         logger.warning("SMTP 未配置完整，跳过邮件发送")
         return False
     msg = MIMEMultipart("related")
     msg["Subject"] = Header(subject, "utf-8")
     msg["From"] = formataddr(("XHS竞品监测", cfg["smtp"]["user"]))
-    msg["To"] = ",".join(cfg["smtp"]["to"])
+    msg["To"] = ",".join(to)
     msg.attach(MIMEText(html, "html", "utf-8"))
     for p in attachments or []:
         _attach(msg, p)
     with _connect_smtp(cfg) as smtp:
-        smtp.sendmail(cfg["smtp"]["user"], cfg["smtp"]["to"], msg.as_string())
-    logger.info(f"邮件已发送: {subject} -> {cfg['smtp']['to']}")
+        smtp.sendmail(cfg["smtp"]["user"], to, msg.as_string())
+    logger.info(f"邮件已发送: {subject} -> {to}")
     return True
 
 
@@ -52,4 +53,4 @@ def send_alert(cfg, title: str, detail: str):
     from jinja2 import Environment, FileSystemLoader
     env = Environment(loader=FileSystemLoader(BASE_DIR / "monitor" / "templates"))
     html = env.get_template("alert.html.j2").render(title=title, detail=detail)
-    return _send(cfg, f"[告警] XHS竞品监测: {title}", html)
+    return _send(cfg, f"[告警] XHS竞品监测: {title}", html, to=cfg["smtp"]["alert_to"])

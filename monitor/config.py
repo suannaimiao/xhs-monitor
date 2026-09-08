@@ -32,6 +32,7 @@ def load_config():
             "user": os.getenv("SMTP_USER", ""),
             "pass": os.getenv("SMTP_PASS", ""),
             "to": [x.strip() for x in os.getenv("MAIL_TO", "").split(",") if x.strip()],
+            "alert_to": [x.strip() for x in os.getenv("MAIL_ALERT", os.getenv("MAIL_TO", "")).split(",") if x.strip()],
         },
         "settings": {
             "max_details_per_user": int(settings.get("max_details_per_user", 30)),
