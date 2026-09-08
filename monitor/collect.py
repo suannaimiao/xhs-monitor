@@ -199,15 +199,21 @@ def collect_user(api, conn, user: dict, cfg: dict, run_at: str, errors: list) ->
             # 新笔记拉详情；已有但缺详情的笔记（历史回填）也补
             if (is_new or not known.get(nid)) and stats["detail_fetched"] < max_details:
                 time.sleep(random.uniform(*cfg["settings"]["detail_sleep"]))
-                ok, dmsg, res = api.get_note_info(s["note_url"])
-                if ok:
-                    item = (res or {}).get("data", {}).get("items", [{}])[0]
+                try:
+                    item, derr = _fetch_detail(api, s["note_url"])
+                except RuntimeError:
+                    raise
+                if item is not None:
                     s.update(_detail_from_note_info(item))
                     s["raw"] = item
                     stats["detail_fetched"] += 1
                 else:
-                    logger.warning(f"详情拉取失败 {nid}: {dmsg}")
-                    errors.append(f"[{name}] 详情失败 {nid}: {dmsg}")
+                    if derr == "rate_limit":
+                        logger.warning(f"[{name}] 详情限频，跳过 {nid}")
+                        errors.append(f"[{name}] 详情限频（{nid}）")
+                    else:
+                        logger.warning(f"详情拉取失败 {nid}: {derr}")
+                        errors.append(f"[{name}] 详情失败 {nid}: {derr}")
             if not s.get("cobrand"):
                 s["cobrand"] = detect_cobrand(s["title"], s.get("desc", ""), s.get("tags", ""))
             upsert_note(conn, s, detail_fetched="desc" in s)
@@ -220,6 +226,25 @@ def collect_user(api, conn, user: dict, cfg: dict, run_at: str, errors: list) ->
         logger.error(f"[{name}] 采集异常: {e}")
         errors.append(f"[{name}] {e}")
     return stats
+
+
+def _fetch_detail(api, url: str):
+    """拉取笔记详情，严格校验返回结构。
+
+    返回 (item, None) 或 (None, 失败原因)。限频/空响应返回 (None, 'rate_limit') 由调用方退避。
+    """
+    ok, msg, res = api.get_note_info(url)
+    if not ok:
+        if "登录已过期" in str(msg):
+            raise RuntimeError("登录已过期")
+        return None, str(msg)
+    items = (res or {}).get("data", {}).get("items") or []
+    if not items:
+        return None, "rate_limit"
+    item = items[0]
+    if "note_card" not in item:
+        return None, "no_note_card"
+    return item, None
 
 
 def sweep_unfetched(api, conn, cfg, max_notes: int = 0) -> int:
@@ -245,14 +270,22 @@ def sweep_unfetched(api, conn, cfg, max_notes: int = 0) -> int:
             if max_notes and total_ok >= max_notes:
                 return total_ok
             time.sleep(random.uniform(*cfg["settings"]["detail_sleep"]))
-            ok, msg, res = api.get_note_info(r["note_url"])
+            try:
+                item, err = _fetch_detail(api, r["note_url"])
+            except RuntimeError:
+                raise
+            if err == "rate_limit":
+                logger.warning("[sweep] 触发访问频繁，退避 120s 后重试")
+                time.sleep(120)
+                item, err = _fetch_detail(api, r["note_url"])
+                if err == "rate_limit":
+                    logger.error("[sweep] 仍限频，中止本轮 sweep（已修复数据已保存）")
+                    conn.commit()
+                    return total_ok
             attempted.add(r["note_id"])
-            if not ok:
-                if "登录已过期" in str(msg):
-                    raise RuntimeError("登录已过期")
-                logger.warning(f"[sweep] 详情失败 {r['note_id']}: {msg}")
+            if item is None:
+                logger.warning(f"[sweep] 详情失败 {r['note_id']}: {err}")
                 continue
-            item = (res or {}).get("data", {}).get("items", [{}])[0]
             d = _detail_from_note_info(item)
             conn.execute(
                 """UPDATE notes SET desc=?, tags=?, ip_location=?, liked_count=?, collected_count=?,
