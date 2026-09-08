@@ -496,7 +496,7 @@ class XHS_Apis():
             headers, cookies, data = self._request_params(api, data, 'POST')
             response = self.http.post(self.base_url + api, headers=headers, data=data, cookies=cookies, proxies=self._proxies(proxies), timeout=REQUEST_TIMEOUT)
             res_json = response.json()
-            success, msg = res_json["success"], res_json["msg"]
+            success, msg = res_json.get("success", False), res_json.get("msg", "no success field")
         except Exception as e:
             success = False
             msg = _log_api_error(e)
