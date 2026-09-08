@@ -75,6 +75,35 @@ def _summary_html(notes) -> str:
         notes=notes, top_pairs=top_pairs, fmt_ts=_fmt_ts)
 
 
+NEW_ACCOUNT_UIDS = ('5f3f8f06000000000101c771', '5ec28e2300000000010036ae',
+                    '5e5e20b3000000000100873f', '65c356aa000000000903e169',
+                    '6539e1440000000006004edd')
+
+
+def package_new_accounts():
+    """打包新增账号（竞品24-28）的联名数据并发送。"""
+    conn = connect()
+    all_cb = fetch_cobrand(conn, None)
+    conn.close()
+    new_cb = [n for n in all_cb if n["user_id"] in NEW_ACCOUNT_UIDS]
+    logger.info(f"新账号联名笔记: {len(new_cb)} 篇")
+    stamp = "新增账号"
+    excel_path = build_excel(new_cb, DATA_DIR / "excel" / f"联名明细_{stamp}.xlsx")
+    summary_path = DATA_DIR / "reports" / f"cobrand_{stamp}.html"
+    summary_path.write_text(_summary_html(new_cb), encoding="utf-8")
+    zip_paths = build_zip_parts(new_cb, DATA_DIR / "media_zip", f"联名媒体_{stamp}")
+    n = len(zip_paths)
+    total_mb = sum(p.stat().st_size for p in zip_paths) / 1048576
+    logger.info(f"分卷: {n} 卷, 共 {total_mb:.0f}MB")
+    cfg = load_config()
+    for i, zp in enumerate(zip_paths, 1):
+        subject = f"【XHS竞品监测】新增账号联名数据包（{i}/{n}，共{total_mb:.0f}MB）"
+        extra = [excel_path, summary_path, DATA_DIR / "dashboard_cobrand.html"] if i == 1 else []
+        _send(cfg, subject, summary_path.read_text(encoding="utf-8"), [zp] + extra)
+    logger.success(f"新增账号联名数据包发送完成: {n} 卷")
+    return n
+
+
 def main():
     days = int(sys.argv[1]) if len(sys.argv) > 1 else 0
     conn = connect()

@@ -4,6 +4,7 @@
 完成（无待修复）时自动退出；Cookie 过期/持续限频发告警邮件。
 """
 import time
+from pathlib import Path
 
 from loguru import logger
 
@@ -52,6 +53,23 @@ def main():
     fixed = sweep_unfetched(api, conn, cfg, max_notes=BATCH)
     left = remaining(conn)
     logger.info(f"本次修复 {fixed} 篇，剩余 {left} 篇")
+
+    # 新账号联名详情全部就绪后，自动打包发送一次（标志文件防重复）
+    flag = Path(__file__).resolve().parent.parent / "data" / ".flag_new_accounts_packaged"
+    new_bad = conn.execute(
+        "SELECT COUNT(*) FROM notes WHERE user_id IN (?,?,?,?,?) AND cobrand != '' "
+        "AND (detail_json IS NULL OR detail_json NOT LIKE '%note_card%')",
+        ("5f3f8f06000000000101c771", "5ec28e2300000000010036ae",
+         "5e5e20b3000000000100873f", "65c356aa000000000903e169",
+         "6539e1440000000006004edd")).fetchone()[0]
+    if new_bad == 0 and not flag.exists():
+        from .cobrand import NEW_ACCOUNT_UIDS, package_new_accounts
+        n = package_new_accounts()
+        flag.touch()
+        send_alert(cfg, "新增账号联名数据包已发送",
+                   f"竞品24-28 共 {len(NEW_ACCOUNT_UIDS)} 个账号的联名详情已修复完毕，"
+                   f"数据包 {n} 卷已发至成果邮箱，联名看板已更新。")
+
     if left == 0:
         send_alert(cfg, "全部笔记详情修复完成", "所有笔记的正文/图片地址已全部重建，看板已更新。")
         from .dashboard import build_dashboard
